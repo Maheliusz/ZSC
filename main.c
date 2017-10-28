@@ -8,7 +8,7 @@
 void print_packets(pcap_t *capturer, int num) {
     struct pcap_pkthdr *data = calloc(1, sizeof(struct pcap_pkthdr));
     for (int i = 0; i < num; i++) {
-        printf("%.*s", data->len,
+        printf("%.*s", data->caplen,
                pcap_next(capturer, data)
         );
     }
