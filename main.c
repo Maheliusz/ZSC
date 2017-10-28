@@ -14,14 +14,40 @@ void print_packets(pcap_t *capturer, int num) {
     }
 }
 
+char *devprompt() {
+	pcap_if_t *alldevsp, *device;
+	int devcount = 1;
+	char errbuf[PCAP_ERRBUF_SIZE];
+	
+	//find all available devices
+	if (pcap_findalldevs(&alldevsp, errbuf) < 0) {
+		printf("Error finding devices : %s\n" , errbuf);
+		exit(-1);
+	}
+	
+	//print available devices
+	for (device = alldevsp; device != NULL; device = device -> next) {
+		printf("%d. %s - %s\n", devcount, device -> name, device -> description);
+		devcount++;
+	}
+	
+	int n;
+	printf("Enter the number of the device you want to sniff: ");
+    scanf("%d" , &n);
+    if (n < 1) return NULL;
+    for (device = alldevsp; device != NULL && --n; device = device -> next);
+    if (device == NULL) return NULL;
+	return device -> name;
+}
+
 int main(int argc, char *argv[]) {
-    if (argc < 3) {
-        printf("1st argument: name of the port\n2nd argument: number of packets to read\n");
+    if (argc < 2) {
+        printf("1st argument: number of packets to read\n");
         exit(-1);
     }
-    char *port = argv[1];
-    int how_many = atoi(argv[2]);
-    pcap_t *capturer = pcap_create(port, NULL);
+    int how_many = atoi(argv[1]);
+    
+    pcap_t *capturer = pcap_create(devprompt(), NULL);
     if (pcap_activate(capturer) < 0) {
         perror("A");
         exit(-1);
