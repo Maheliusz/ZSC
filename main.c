@@ -4,14 +4,37 @@
 #include <stdlib.h>
 #include <pcap/pcap.h>
 #include <errno.h>
+#include <string.h>
+#include <net/ethernet.h>
+#include <arpa/inet.h>
+
+void hex_dump(const unsigned char* c, int len) {
+	printf("%.2X", c[0]);
+	for (int i = 1; i < len; i++) printf(":%.2X", c[i]);
+}
+
+void print_ethernet_header(const unsigned char *c, int size) {	
+	struct ethhdr *eth = (struct ethhdr *) c;
+	
+	printf("Ethernet Header");
+    printf("\n\t|-Destination Address: "); hex_dump(eth -> h_dest, 6);
+    printf("\t ("); hex_dump(c, 6); printf(")");
+    printf("\n\t|-Source Address:      "); hex_dump(eth -> h_source, 6);
+    printf("\t ("); hex_dump(c + 6, 6); printf(")");
+    
+    unsigned short proto = ntohs((unsigned short) eth -> h_proto);
+    printf("\n\t|-Protocol:            %.4x", proto);
+    switch(proto) {
+		case 0x0800: printf("\t (IPv4)"); break;
+		case 0x86DD: printf("\t (IPv6)"); break;
+	}
+	printf("\n");
+}
 
 void print_packets(pcap_t *capturer, int num) {
     struct pcap_pkthdr *data = calloc(1, sizeof(struct pcap_pkthdr));
-    for (int i = 0; i < num; i++) {
-        printf("%.*s", data->caplen,
-               pcap_next(capturer, data)
-        );
-    }
+    for (int i = 0; i < num; i++)
+		print_ethernet_header(pcap_next(capturer, data), data->caplen);
 }
 
 char *devprompt() {
@@ -41,17 +64,16 @@ char *devprompt() {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        printf("1st argument: number of packets to read\n");
-        exit(-1);
-    }
-    int how_many = atoi(argv[1]);
-    
     pcap_t *capturer = pcap_create(devprompt(), NULL);
     if (pcap_activate(capturer) < 0) {
         perror("A");
         exit(-1);
     }
+    
+    int how_many;
+    printf("Enter the number of the packages to sniff: ");
+    scanf("%d", &how_many);
+    
     print_packets(capturer, how_many);
     pcap_close(capturer);
     return 0;
