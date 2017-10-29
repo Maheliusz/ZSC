@@ -13,6 +13,19 @@ void hex_dump(const unsigned char* c, int len) {
 	for (int i = 1; i < len; i++) printf(":%.2X", c[i]);
 }
 
+void print_bits(int bytelen, const u_char *string) {
+    u_char symbol;
+    for (int i = 0; i < bytelen; i++) {
+        printf("Symbol %d:\n", i);
+        symbol = string[i];
+        for (int j = 7; j >= 0; j++) {
+            printf("%d", (symbol & 1 << j) ? 1 : 0);
+        }
+        printf("\n");
+    }
+    printf("\n\n");
+}
+
 void print_ethernet_header(const unsigned char *c, int size) {	
 	struct ethhdr *eth = (struct ethhdr *) c;
 	
@@ -29,6 +42,8 @@ void print_ethernet_header(const unsigned char *c, int size) {
 		case 0x86DD: printf("\t (IPv6)"); break;
 	}
 	printf("\n");
+	
+	print_bits(size - 14, c + 14);
 }
 
 void print_packets(pcap_t *capturer, int num) {
