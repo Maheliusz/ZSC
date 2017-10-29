@@ -3,14 +3,27 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pcap/pcap.h>
-#include <errno.h>
+
+void print_bits(int bytelen, const u_char *string) {
+    u_char symbol;
+    for (int i = 0; i < bytelen; i++) {
+        printf("Symbol %d:\n", i);
+        symbol = string[i];
+        for (int j = 7; j >= 0; j++) {
+            printf("%d", (symbol & 1 << j) ? 1 : 0);
+        }
+        printf("\n");
+    }
+    printf("\n\n");
+}
 
 void print_packets(pcap_t *capturer, int num) {
     struct pcap_pkthdr *data = calloc(1, sizeof(struct pcap_pkthdr));
     for (int i = 0; i < num; i++) {
-        printf("%.*s", data->caplen,
-               pcap_next(capturer, data)
-        );
+//        printf("%.*s", data->caplen,
+//               pcap_next(capturer, data)
+//        );
+        print_bits(data->caplen, pcap_next(capturer, data));
     }
 }
 
