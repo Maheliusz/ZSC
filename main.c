@@ -8,6 +8,15 @@
 #include <net/ethernet.h>
 #include <arpa/inet.h>
 
+unsigned short from_net_order(unsigned short n) {
+    unsigned short x = 0x0001;
+    if(!(*(unsigned char*) &x)) return n;    //big endian
+    
+    //convert from network order to little endian
+    unsigned char *c = (unsigned char*) &n;
+    return *c << 8 | *(c + 1);
+}
+
 void hex_dump(const unsigned char* c, int len) {
 	printf("%.2X", c[0]);
 	for (int i = 1; i < len; i++) printf(":%.2X", c[i]);
@@ -37,13 +46,15 @@ void print_ethernet_header(const unsigned char *c, int size) {
     
     unsigned short proto = ntohs((unsigned short) eth -> h_proto);
     printf("\n\t|-Protocol:            %.4x", proto);
-    switch(proto) {
+    switch(from_net_order((unsigned short) eth -> h_proto)) {
 		case 0x0800: printf("\t (IPv4)"); break;
 		case 0x86DD: printf("\t (IPv6)"); break;
 	}
 	printf("\n");
 	
-//	print_bits(size - 14, c + 14);
+	hex_dump(c + 14, size - 14);
+	
+	printf("\n\n");
 }
 
 void print_packets(pcap_t *capturer, int num) {
