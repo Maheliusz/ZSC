@@ -43,7 +43,7 @@ void print_ethernet_header(const unsigned char *c, int size) {
 	}
 	printf("\n");
 	
-	print_bits(size - 14, c + 14);
+//	print_bits(size - 14, c + 14);
 }
 
 void print_packets(pcap_t *capturer, int num) {
