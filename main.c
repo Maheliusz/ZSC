@@ -18,7 +18,7 @@ void print_bits(int bytelen, const u_char *string) {
     for (int i = 0; i < bytelen; i++) {
         printf("Symbol %d:\n", i);
         symbol = string[i];
-        for (int j = 7; j >= 0; j++) {
+        for (int j = 7; j >= 0; j--) {
             printf("%d", (symbol & 1 << j) ? 1 : 0);
         }
         printf("\n");
