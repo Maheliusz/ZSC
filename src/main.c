@@ -104,7 +104,7 @@ char *devprompt() {
 int main(int argc, char *argv[]) {
     pcap_t *capturer = pcap_create(devprompt(), NULL);
     if (pcap_activate(capturer) < 0) {
-        perror("A");
+        perror("Capture handle activation error: ");
         exit(-1);
     }
 
