@@ -11,9 +11,11 @@ set(SOURCE_FILES ${SRC_DIR}/main.c ${SRC_DIR}/packet_processor.c)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIB_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BIN_DIR})
 
+find_package(Threads)
+
 include(FindPCAP.cmake)
 include_directories(${SRC_DIR} ${BIN_DIR} ${LIB_DIR} ${INCLUDE_DIR})
 
 add_executable(ZSC ${SOURCE_FILES})
 
-target_link_libraries(ZSC ${PCAP_LIBRARY})
+target_link_libraries(ZSC ${PCAP_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
