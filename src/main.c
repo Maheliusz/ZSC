@@ -95,7 +95,7 @@ char *devprompt() {
     int n;
     printf("Enter the number of the device you want to sniff: ");
     scanf("%d", &n);
-    if (n < 1) return NULL;
+    if (n < 1 || n > devcount) return NULL;
     for (device = alldevsp; device != NULL && --n; device = device->next);
     if (device == NULL) return NULL;
     return device->name;
