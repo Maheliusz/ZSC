@@ -1,6 +1,10 @@
 #pragma once
 #include <byte_order.h>
 
+#define __IPHDR_OFFSETS "01122211244"
+#define IPHDR_OFFSET(i) (__IPHDR_OFFSETS[i] - '0')
+#define IPHDR_FIELDC 11
+
 struct iphdr {
 #if defined(__BYTE_ORDER__)
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__

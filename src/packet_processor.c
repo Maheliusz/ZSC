@@ -9,12 +9,14 @@ void print_packet(const unsigned char *buf, int size) {
     buf += ETH_HLEN;
     size -= ETH_HLEN;
     
-    switch(eth -> h_proto) {
+    switch(ntohs(eth -> h_proto)) {
 		case ETH_P_IP:;
 			struct iphdr *ip = (struct iphdr*) buf;
             dump_ip_header(buf, (int) ip -> ihl);
             break;
         case ETH_P_IPV6:
+//			dump_ip6_header(buf, (int) ip -> ihl);
+//			break;
         default:
 			hex_dump(buf, size);
             break;
@@ -45,7 +47,7 @@ void print_ethernet_header(const struct ethhdr *eth) {
             printf("IPv4\n");
             break;
         case ETH_P_IPV6:
-            printf("IPv6\n");
+//            printf("IPv6\n");
             break;
         default:
 			printf("%.4x\n", proto);
@@ -54,7 +56,21 @@ void print_ethernet_header(const struct ethhdr *eth) {
 }
 
 void dump_ip_header(const unsigned char *buf, int len) {
-	hex_dump(buf, 1);
+	for (int i = 1; i < IPHDR_FIELDC; i++) {
+		hex_dump(buf + IPHDR_OFFSET(i - 1), IPHDR_OFFSET(i));
+		printf("|");
+	}
+	printf("\b\n");
+}
+
+
+void dump_ip6_header(const unsigned char *buf, int len) {
+	for (int i = 1; i < IP6HDR_FIELDC; i++) {
+		printf("%d", __IP6HDR_OFFSETS[i]);
+//		hex_dump(buf + IP6HDR_OFFSET(i - 1), IP6HDR_OFFSET(i));
+		printf("|");
+	}
+	printf("\b\n");
 }
 
 void hex_dump(const unsigned char *buf, int len) {
