@@ -27,9 +27,12 @@ packet_t encapsulate_packet(const unsigned char *c, int size) {
 packet_t *capture_packets(pcap_t *capturer, int num) {
     struct pcap_pkthdr *data = calloc(1, sizeof(struct pcap_pkthdr));
     packet_t *packets = calloc((size_t) num, sizeof(packet_t));
+    const unsigned char *c;
     
-    for (int i = 0; i < num; i++)
-        packets[i] = encapsulate_packet(pcap_next(capturer, data), data->caplen);
+    for (int i = 0; i < num; i++) {
+		pcap_next_ex(capturer, &data, &c);
+        packets[i] = encapsulate_packet(c, data->caplen);
+    }
     
     return packets;
 }
