@@ -11,7 +11,7 @@
 #include "packet_processor.h"
 
 struct packet {
-    unsigned char c[1024];
+    unsigned char c[ETH_FRAME_LEN];
     int size;
 };
 
@@ -24,25 +24,17 @@ packet_t encapsulate_packet(const unsigned char *c, int size) {
     return pck;
 }
 
-void *start_processing_thread(void *arg) {
-    packet_t *pck = (packet_t *) arg;
-    print_ethernet_header(pck->c, pck->size);
-    return NULL;
-}
-
-void capture_packets(pcap_t *capturer, int num) {
+packet_t *capture_packets(pcap_t *capturer, int num) {
     struct pcap_pkthdr *data = calloc(1, sizeof(struct pcap_pkthdr));
-    pthread_t *processing_threads = calloc((size_t) num, sizeof(pthread_t));
     packet_t *packets = calloc((size_t) num, sizeof(packet_t));
+    const unsigned char *c;
+    
     for (int i = 0; i < num; i++) {
-        packets[i] = encapsulate_packet(pcap_next(capturer, data), data->caplen);
-        pthread_create(&processing_threads[i], NULL, start_processing_thread, (void *) &packets[i]);
+		pcap_next_ex(capturer, &data, &c);
+        packets[i] = encapsulate_packet(c, data->caplen);
     }
-    for (int i = 0; i < num; i++) {
-        pthread_join(processing_threads[i], NULL);
-    }
-    free(processing_threads);
-    free(packets);
+    
+    return packets;
 }
 
 char *devprompt() {
@@ -71,7 +63,7 @@ char *devprompt() {
     return device->name;
 }
 
-int packet_number() {
+int pack_num_prompt() {
     int how_many;
     printf("Enter the number of the packages to sniff: ");
     scanf("%d", &how_many);
@@ -89,7 +81,12 @@ pcap_t *init_capture() {
 
 int main(int argc, char *argv[]) {
     pcap_t *capturer = init_capture();
-    capture_packets(capturer, packet_number());
+    int how_many = pack_num_prompt();
+    
+    packet_t *packets = capture_packets(capturer, how_many);
+    for (int i = 0; i < how_many; i++) print_packet(packets[i].c, packets[i].size);
+    
+    free(packets);
     pcap_close(capturer);
     return 0;
 }
