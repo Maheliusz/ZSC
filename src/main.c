@@ -10,31 +10,14 @@
 #include <ethernet.h>
 #include "packet_processor.h"
 
-struct packet {
-    unsigned char c[ETH_FRAME_LEN];
+typedef struct packet {
+    const unsigned char *data;
     int size;
-};
+} packet_t;
 
-typedef struct packet packet_t;
-
-packet_t encapsulate_packet(const unsigned char *c, int size) {
-    packet_t pck;
-    memcpy(pck.c, c, (size_t) size);
-    pck.size = size;
-    return pck;
-}
-
-packet_t *capture_packets(pcap_t *capturer, int num) {
-    struct pcap_pkthdr *data = calloc(1, sizeof(struct pcap_pkthdr));
-    packet_t *packets = calloc((size_t) num, sizeof(packet_t));
-    const unsigned char *c;
-    
-    for (int i = 0; i < num; i++) {
-		pcap_next_ex(capturer, &data, &c);
-        packets[i] = encapsulate_packet(c, data->caplen);
-    }
-    
-    return packets;
+void capture_packet(pcap_t *capturer, struct pcap_pkthdr *pkt, packet_t *pack) {
+	pack -> data = pcap_next(capturer, pkt);
+    pack -> size = pkt -> caplen;
 }
 
 char *devprompt() {
@@ -83,9 +66,15 @@ int main(int argc, char *argv[]) {
     pcap_t *capturer = init_capture();
     int how_many = pack_num_prompt();
     
-    packet_t *packets = capture_packets(capturer, how_many);
-    for (int i = 0; i < how_many; i++) print_packet(packets[i].c, packets[i].size);
+    struct pcap_pkthdr *pkt = calloc(1, sizeof(struct pcap_pkthdr));
+    packet_t *packets = calloc((size_t) how_many, sizeof(packet_t));
     
+    for (int i = 0; i < how_many; i++) {
+		capture_packet(capturer, pkt, &packets[i]);
+		print_packet(packets[i].data, packets[i].size);
+	}
+    
+    free(pkt);
     free(packets);
     pcap_close(capturer);
     return 0;

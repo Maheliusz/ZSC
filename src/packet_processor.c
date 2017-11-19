@@ -1,56 +1,46 @@
 #include "packet_processor.h"
 
 void print_packet(const unsigned char *buf, int size) {
-	struct ethhdr *eth = (struct ethhdr *) buf;
-	
-	printf("Ethernet Header\n");
-	dump_ethernet_header(buf);
-    print_ethernet_header(eth);
-    buf += ETH_HLEN;
-    size -= ETH_HLEN;
-    
-    switch(ntohs(eth -> h_proto)) {
-		case ETH_P_IP:;
-			struct iphdr *ip = (struct iphdr*) buf;
-            dump_ip_header(buf, (int) ip -> ihl);
-            break;
-        case ETH_P_IPV6:
-//			dump_ip6_header(buf, (int) ip -> ihl);
-//			break;
-        default:
-			hex_dump(buf, size);
-            break;
-	}
+    print_ethernet_header(buf, size);
 	printf("\n\n");
 }
 
-void dump_ethernet_header(const unsigned char *buf) {
+void print_ethernet_header(const unsigned char *buf, int size) {
+	struct ethhdr *eth = (struct ethhdr *) buf;
+	
+	printf("Ethernet Header\n");
+	
+	//dump hex value of the header separating its fields
 	hex_dump(buf, ETH_ALEN);
 	printf("|");
 	hex_dump(buf + ETH_ALEN, ETH_ALEN);
 	printf("|");
 	hex_dump(buf + 2 * ETH_ALEN, ETH_HLEN - 2 * ETH_ALEN);
-}
-
-void print_ethernet_header(const struct ethhdr *eth) {
+	
+	//calculate offset for next header
+	buf += ETH_HLEN;
+    size -= ETH_HLEN;
+	
+	//print header with description
     printf("\n\t|-Destination Address: ");
     hex_dump(eth -> h_dest, ETH_ALEN);
-    printf(")");
     printf("\n\t|-Source Address:      ");
     hex_dump(eth -> h_source, ETH_ALEN);
-    printf(")");
     
     h_uint16_t proto = ntohs(eth -> h_proto);
     printf("\n\t|-Protocol:            ");
     switch (proto) {
         case ETH_P_IP:
             printf("IPv4\n");
+            dump_ip_header(buf, ((struct iphdr *) buf) -> ihl);
             break;
         case ETH_P_IPV6:
-//            printf("IPv6\n");
+            printf("IPv6\n");
+			dump_ip6_header(buf, IP6_HLEN);
             break;
         default:
 			printf("%.4x\n", proto);
+			hex_dump(buf, size);
             break;
     }
 }
@@ -63,14 +53,14 @@ void dump_ip_header(const unsigned char *buf, int len) {
 	printf("\b\n");
 }
 
-
 void dump_ip6_header(const unsigned char *buf, int len) {
 	for (int i = 1; i < IP6HDR_FIELDC; i++) {
-		printf("%d", __IP6HDR_OFFSETS[i]);
-//		hex_dump(buf + IP6HDR_OFFSET(i - 1), IP6HDR_OFFSET(i));
+		hex_dump(buf + IP6HDR_OFFSET(i - 1), IP6HDR_OFFSET(i));
 		printf("|");
 	}
 	printf("\b\n");
+	
+	printf("%d", IP6HDR_FIELDC);
 }
 
 void hex_dump(const unsigned char *buf, int len) {

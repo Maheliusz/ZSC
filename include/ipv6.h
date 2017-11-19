@@ -1,9 +1,10 @@
 #pragma once
 
 #define IP6_ALEN	16				//octets in one IPv6 address
+#define IP6_HLEN	40				//Total octets in header.
 #define IP6_PREALEN	6				//octets preceding source address in a frame
 
-#define __IP6HDR_OFFSETS "011211"
+#define __IP6HDR_OFFSETS "011211\0"
 #define IP6HDR_OFFSET(i) (__IP6HDR_OFFSETS[i] - '0')
 #define IP6HDR_FIELDC 6
 

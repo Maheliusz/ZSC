@@ -1,7 +1,7 @@
 #pragma once
 #include <byte_order.h>
 
-#define __IPHDR_OFFSETS "01122211244"
+#define __IPHDR_OFFSETS "01122211244\0"
 #define IPHDR_OFFSET(i) (__IPHDR_OFFSETS[i] - '0')
 #define IPHDR_FIELDC 11
 
