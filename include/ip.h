@@ -15,7 +15,7 @@ struct iphdr {
 					ihl:4;			//header length
 #endif
 #else
-	#error "Your compiler doesn't recognize support __BYTE_ORDER__"
+	#error "Your compiler doesn't support __BYTE_ORDER__"
 #endif
 	
 	unsigned char	tos;
