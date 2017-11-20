@@ -7,7 +7,7 @@ set(BIN_DIR ${CMAKE_SOURCE_DIR}/bin)
 set(LIB_DIR ${CMAKE_SOURCE_DIR}/lib)
 set(INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include)
 set(SOURCE_FILES ${SRC_DIR}/main.c ${SRC_DIR}/packet_processor.c ${INCLUDE_DIR}/byte_order.h ${INCLUDE_DIR}/ethernet.h
-        ${INCLUDE_DIR}/ip.h ${INCLUDE_DIR}/ipv6.h ${INCLUDE_DIR}/packet_processor.h)
+        ${INCLUDE_DIR}/ip.h ${INCLUDE_DIR}/ipv6.h ${INCLUDE_DIR}/packet_processor.h ${INCLUDE_DIR}/icmpv6.h)
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIB_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BIN_DIR})
