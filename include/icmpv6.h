@@ -1,8 +1,10 @@
 #pragma once
 #include <byte_order.h>
 
-#define ICMPV6_ECHOREQUEST              128
-#define ICMPV6_ECHOREPLY                129
+#define ICMP6_HLEN			8
+
+#define ICMP6_ECHOREQUEST	128
+#define ICMP6_ECHOREPLY		129
 
 struct icmp6hdr {
 	unsigned char	type;
@@ -15,3 +17,6 @@ struct icmp6hdr {
 		unsigned char	un_data8[4];	/* type-specific field */
 	} dataun;
 };
+
+void print_icmp6_header(const struct icmp6hdr *icmp, int size);
+void print_icmp6_echo(const struct icmp6hdr *icmp, int size);

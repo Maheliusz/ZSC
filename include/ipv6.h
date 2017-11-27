@@ -3,9 +3,8 @@
 
 #define IP6_ALEN	16				//octets in one IPv6 address
 #define IP6_HLEN	40				//Total octets in header.
-#define IP6_PREALEN	6				//octets preceding source address in a frame
 
-#define __IP6HDR_OFFSETS "011211\0"
+#define __IP6HDR_OFFSETS "112211\0"
 #define IP6HDR_OFFSET(i) (__IP6HDR_OFFSETS[i] - '0')
 #define IP6HDR_FIELDC 6
 
@@ -33,3 +32,5 @@ h_uint32_t		get_ip6_flow_lbl(struct ipv6hdr);
 #define get_ip6_version(x)	((unsigned char) ((ntohl(x -> vtcfl) & 0xF0000000) >> 28))
 #define get_ip6_tclass(x)	((unsigned char) ((ntohl(x -> vtcfl) & 0xFF00000) >> 20))
 #define get_ip6_flow_lbl(x)	(ntohl(x -> vtcfl) & 0xFFFFF)
+
+void print_ip6_header(const struct ipv6hdr *ip6, int size);

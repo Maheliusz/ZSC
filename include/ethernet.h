@@ -13,3 +13,5 @@ struct ethhdr {
 	unsigned char	h_source[ETH_ALEN];	//source ether addr
 	n_uint16_t		h_proto;			//packet type ID field
 } __attribute__((packed));
+
+void print_ethernet_header(const struct ethhdr *eth, int size);
