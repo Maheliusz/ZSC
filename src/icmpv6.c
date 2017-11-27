@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <icmpv6.h>
-#include <packet_processor.h>
+#include <common.h>
 
 void print_icmp6_header(const struct icmp6hdr *icmp, int size) {
 	printf("\n\t|-Type:     ");

@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <ethernet.h>
-#include <packet_processor.h>
+#include <common.h>
 
 void print_ethernet_header(const struct ethhdr *eth, int size) {
     printf("\n\t|-Destination Address: ");

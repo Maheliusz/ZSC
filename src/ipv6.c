@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <ipv6.h>
-#include <packet_processor.h>
+#include <common.h>
 
 void print_ip6_header(const struct ipv6hdr *ip, int size) {
 	printf("\n\t|-IP Version:          ");

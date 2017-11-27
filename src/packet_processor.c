@@ -1,6 +1,7 @@
 #include "packet_processor.h"
 
-void process_packet(const unsigned char *buf, int size) {
+void process_packet(unsigned char *buf, int size) {
+	fsend = 0;
 	printf("Ethernet Header\n");
 	
 	//dump hex value of the header separating its fields
@@ -28,7 +29,7 @@ void process_packet(const unsigned char *buf, int size) {
 	printf("\n\n");
 }
 
-void process_ip_header(const unsigned char *buf, int offset, int size) {
+void process_ip_header(unsigned char *buf, int offset, int size) {
 	printf("IP Header\n");
 	const unsigned char *header = buf + offset;
 	
@@ -44,7 +45,7 @@ void process_ip_header(const unsigned char *buf, int offset, int size) {
 	print_ip_header(ip, ip -> ihl);
 }
 
-void process_ip6_header(const unsigned char *buf, int offset, int size) {
+void process_ip6_header(unsigned char *buf, int offset, int size) {
 	printf("IPv6 Header\n");
 	const unsigned char *header = buf + offset;
 	
@@ -74,7 +75,7 @@ void process_ip6_header(const unsigned char *buf, int offset, int size) {
 	}
 }
 
-void process_icmp6_header(const unsigned char *buf, int ip_offset, int offset, int size) {
+void process_icmp6_header(unsigned char *buf, int ip_offset, int offset, int size) {
 	printf("ICMP6 Header\n");
 	const unsigned char *header = buf + offset;
 	struct icmp6hdr *icmp = (struct icmp6hdr *) header;
@@ -101,7 +102,7 @@ void process_icmp6_header(const unsigned char *buf, int ip_offset, int offset, i
 	}
 }
 
-void process_icmp6_echo_request(const unsigned char *buf, int ip_offset, int offset, int size) {
+static inline void process_icmp6_echo(const unsigned char *buf, int ip_offset, int offset, int size) {
 	printf("ICMP6 Echo Request");
 	const unsigned char *header = buf + offset;
 	struct icmp6hdr *icmp = (struct icmp6hdr *) header;
@@ -116,22 +117,47 @@ void process_icmp6_echo_request(const unsigned char *buf, int ip_offset, int off
 		else putchar(' ');
 }
 
-void process_icmp6_echo_reply(const unsigned char *buf, int ip_offset, int offset, int size) {
-	printf("ICMP6 Echo Reply");
+void process_icmp6_echo_request(unsigned char *buf, int ip_offset, int offset, int size) {
+	process_icmp6_echo(buf, ip_offset, offset, size);
+	
 	const unsigned char *header = buf + offset;
 	struct icmp6hdr *icmp = (struct icmp6hdr *) header;
-	offset += ICMP6_HLEN;
 	
-	print_icmp6_echo(icmp, ICMP6_HLEN);
-	hex_dump(buf + offset, size - offset);
-	printf("\n");
-	fflush(stdout);
-	for (int i = offset; i < size; i++)
-		if (buf[i] >= ' ' && buf[i] < '~') putchar(buf[i]);
-		else putchar(' ');
+	//swap ethernet addresses
+	struct ethhdr *eth = (struct ethhdr *) buf;
+	byte_swap(eth -> h_dest, eth -> h_source, ETH_ALEN);
+	
+	//swap ip addresses
+	struct ipv6hdr *ip6 = (struct ipv6hdr *) (buf + ip_offset);
+	byte_swap(ip6 -> daddr, ip6 -> saddr, IP6_ALEN);
+	
+	//change message type
+	//icmp -> type = ICMP6_ECHOREPLY;
+	
+	//calculate the checksum
+	//icmp -> cksum = chksum(...);
+	
+	fsend = 1;
+}
+
+void process_icmp6_echo_reply(const unsigned char *buf, int ip_offset, int offset, int size) {
+	process_icmp6_echo(buf, ip_offset, offset, size);
+}
+
+n_uint16_t chksum(const unsigned char *buf, int size) {
 }
 
 void hex_dump(const unsigned char *buf, int len) {
 	printf("%.2X", buf[0]);
 	for (int i = 1; i < len; i++) printf(":%.2X", buf[i]);
+}
+
+void byte_swap(unsigned char *c1, unsigned char *c2, int size) {
+	unsigned char tmp;
+	
+	for (int i = 0; i < size; i++) {
+		tmp = c2[i];
+		c2[i] = c1[i];
+		c1[i] = tmp;
+	}
 }

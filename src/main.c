@@ -7,11 +7,10 @@
 #include <string.h>
 #include <pthread.h>
 
-#include <ethernet.h>
 #include "packet_processor.h"
 
 typedef struct packet {
-	const unsigned char *data;
+	unsigned char *data;
 	int size;
 } packet_t;
 
@@ -72,6 +71,14 @@ int main(int argc, char *argv[]) {
 	for (int i = 0; i < how_many; i++) {
 		capture_packet(capturer, pkt, &packets[i]);
 		process_packet(packets[i].data, packets[i].size);
+		
+		if (fsend != 0) {
+			if (pcap_inject(capturer, packets[i].data, packets[i].size) == -1) {
+				pcap_perror(capturer, "Failed to inject packet");
+				pcap_close(capturer);
+				exit(1);
+			}
+		}
 	}
 	
 	free(pkt);
