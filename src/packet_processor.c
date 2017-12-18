@@ -70,6 +70,11 @@ void process_ip6_header(unsigned char *buf, int offset, int size) {
 		case IP6_NEXT_ICMPv6:
 			process_icmp6_header(buf, offset, offset + IP6_HLEN, size);
 			break;
+		case IP6_NEXT_UDP:
+			process_udp_header(buf, offset, offset + IP6_HLEN, size);
+			break;
+		case IP6_NEXT_TCP:
+			process_tcp_header(buf, offset, offset + IP6_HLEN, size);
 		default:
 			hex_dump(buf + offset + IP6_HLEN, size - offset - IP6_HLEN);
 	}
@@ -109,12 +114,8 @@ static inline void process_icmp6_echo(const unsigned char *buf, int ip_offset, i
 	offset += ICMP6_HLEN;
 	
 	print_icmp6_echo(icmp, ICMP6_HLEN);
-	hex_dump(buf + offset, size - offset);
-	printf("\n");
-	fflush(stdout);
-	for (int i = offset; i < size; i++)
-		if (buf[i] >= ' ' && buf[i] < '~') putchar(buf[i]);
-		else putchar(' ');
+	
+	print_data(buf, offset, size);
 }
 
 void process_icmp6_echo_request(unsigned char *buf, int ip_offset, int offset, int size) {
@@ -142,6 +143,51 @@ void process_icmp6_echo_request(unsigned char *buf, int ip_offset, int offset, i
 
 void process_icmp6_echo_reply(const unsigned char *buf, int ip_offset, int offset, int size) {
 	process_icmp6_echo(buf, ip_offset, offset, size);
+}
+
+void process_udp_header(unsigned char *buf, int ip_offset, int offset, int size) {
+	printf("UDP Header\n");
+	const unsigned char *header = buf + offset;
+	struct udphdr *udp = (struct udphdr *) header;
+	
+	//dump hex value of the header separating its fields
+	hex_dump(header + 0, 2);
+	for (int i = 1; i < 4; i++) {
+		printf("|");
+		hex_dump(header + 2 * i, 2);
+	}
+
+	//print header with description
+	print_udp_header(udp, IP6_HLEN);
+	
+	print_data(buf, offset, size);
+}
+
+void process_tcp_header(unsigned char *buf, int ip_offset, int offset, int size) {
+	printf("TCP Header\n");
+	const unsigned char *header = buf + offset;
+	struct tcphdr *tcp = (struct tcphdr *) header;
+	
+	//dump hex value of the header separating its fields
+//	hex_dump(header + 0, 2);
+//	for (int i = 1; i < 4; i++) {
+//		printf("|");
+//		hex_dump(header + 2 * i, 2);
+//	}
+
+	//print header with description
+	print_tcp_header(tcp, IP6_HLEN);
+	
+	print_data(buf, offset, size);
+}
+
+void print_data(const unsigned char *buf, int offset, int size) {
+	hex_dump(buf + offset, size - offset);
+	printf("\n");
+	fflush(stdout);
+	for (int i = offset; i < size; i++)
+		if (buf[i] >= ' ' && buf[i] < '~') putchar(buf[i]);
+		else putchar(' ');
 }
 
 n_uint16_t chksum(const unsigned char *buf, int size) {
