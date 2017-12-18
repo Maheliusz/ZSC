@@ -1,5 +1,7 @@
 #include <stdlib.h>
 #include <icmpv6.h>
+#include <tcp.h>
+#include <udp.h>
 #include "packet_processor.h"
 
 void process_packet(unsigned char *buf, int size) {
@@ -48,33 +50,38 @@ void process_ip_header(unsigned char *buf, int offset, int size) {
 }
 
 void process_ip6_header(unsigned char *buf, int offset, int size) {
-    printf("IPv6 Header\n");
-    const unsigned char *header = buf + offset;
-
-    //dump hex value of the header separating its fields
-    for (int i = 0; i < IP6HDR_FIELDC; i++) {
-        hex_dump(header, IP6HDR_OFFSET(i));
-        printf("|");
-        header += IP6HDR_OFFSET(i);
-    }
-
-    hex_dump(header, IP6_ALEN);
-    printf("|");
-    hex_dump(header + IP6_ALEN, IP6_ALEN);
-
-    header = buf + offset;
-
-    //print header with description
-    print_ip6_header((struct ipv6hdr *) header, IP6_HLEN);
-
-    //process next header
-    switch (((struct ipv6hdr *) header)->nexthdr) {
-        case IP6_NEXT_ICMPv6:
-            process_icmp6_header(buf, offset, offset + IP6_HLEN, size, header);
-            break;
-        default:
-            hex_dump(buf + offset + IP6_HLEN, size - offset - IP6_HLEN);
-    }
+	printf("IPv6 Header\n");
+	const unsigned char *header = buf + offset;
+	
+	//dump hex value of the header separating its fields
+	for (int i = 0; i < IP6HDR_FIELDC; i++) {
+		hex_dump(header, IP6HDR_OFFSET(i));
+		printf("|");
+		header += IP6HDR_OFFSET(i);
+	}
+	
+	hex_dump(header, IP6_ALEN);
+	printf("|");
+	hex_dump(header + IP6_ALEN, IP6_ALEN);
+	
+	header = buf + offset;
+	
+	//print header with description
+	print_ip6_header((struct ipv6hdr *) header, IP6_HLEN);
+	
+	//process next header
+	switch (((struct ipv6hdr *) header) -> nexthdr) {
+		case IP6_NEXT_ICMPv6:
+			process_icmp6_header(buf, offset, offset + IP6_HLEN, size, (struct ipv6hdr *) header);
+			break;
+		case IP6_NEXT_UDP:
+			process_udp_header(buf, offset, offset + IP6_HLEN, size);
+			break;
+		case IP6_NEXT_TCP:
+			process_tcp_header(buf, offset, offset + IP6_HLEN, size);
+		default:
+			hex_dump(buf + offset + IP6_HLEN, size - offset - IP6_HLEN);
+	}
 }
 
 void process_icmp6_header(unsigned char *buf, int ip_offset, int offset, int size, struct ipv6hdr *hdrv6) {
@@ -102,23 +109,18 @@ void process_icmp6_header(unsigned char *buf, int ip_offset, int offset, int siz
         default:
             hex_dump(buf + 4, size - 4);
     }
-    //TODO
     printf("\nChksum: %x\n", ntohs(icmpv6_chksum(hdrv6, icmp)));
 }
 
 static inline void process_icmp6_echo(const unsigned char *buf, int ip_offset, int offset, int size) {
-    printf("ICMP6 Echo Request");
-    const unsigned char *header = buf + offset;
-    struct icmp6hdr *icmp = (struct icmp6hdr *) header;
-    offset += ICMP6_HLEN;
-
-    print_icmp6_echo(icmp, ICMP6_HLEN);
-    hex_dump(buf + offset, size - offset);
-    printf("\n");
-    fflush(stdout);
-    for (int i = offset; i < size; i++)
-        if (buf[i] >= ' ' && buf[i] < '~') putchar(buf[i]);
-        else putchar(' ');
+	printf("ICMP6 Echo Request");
+	const unsigned char *header = buf + offset;
+	struct icmp6hdr *icmp = (struct icmp6hdr *) header;
+	offset += ICMP6_HLEN;
+	
+	print_icmp6_echo(icmp, ICMP6_HLEN);
+	
+	print_data(buf, offset, size);
 }
 
 void process_icmp6_echo_request(unsigned char *buf, int ip_offset, int offset, int size) {
@@ -245,6 +247,50 @@ n_uint16_t chksum(n_uint16_t *buf, int len) {
         sum = (n_uint16_t) sum + (sum >> 16);
     }
     return ~((n_uint16_t) sum);
+}
+void process_udp_header(unsigned char *buf, int ip_offset, int offset, int size) {
+	printf("UDP Header\n");
+	const unsigned char *header = buf + offset;
+	struct udphdr *udp = (struct udphdr *) header;
+	
+	//dump hex value of the header separating its fields
+	hex_dump(header + 0, 2);
+	for (int i = 1; i < 4; i++) {
+		printf("|");
+		hex_dump(header + 2 * i, 2);
+	}
+
+	//print header with description
+	print_udp_header(udp, IP6_HLEN);
+	
+	print_data(buf, offset, size);
+}
+
+void process_tcp_header(unsigned char *buf, int ip_offset, int offset, int size) {
+	printf("TCP Header\n");
+	const unsigned char *header = buf + offset;
+	struct tcphdr *tcp = (struct tcphdr *) header;
+	
+	//dump hex value of the header separating its fields
+//	hex_dump(header + 0, 2);
+//	for (int i = 1; i < 4; i++) {
+//		printf("|");
+//		hex_dump(header + 2 * i, 2);
+//	}
+
+	//print header with description
+	print_tcp_header(tcp, IP6_HLEN);
+	
+	print_data(buf, offset, size);
+}
+
+void print_data(const unsigned char *buf, int offset, int size) {
+	hex_dump(buf + offset, size - offset);
+	printf("\n");
+	fflush(stdout);
+	for (int i = offset; i < size; i++)
+		if (buf[i] >= ' ' && buf[i] < '~') putchar(buf[i]);
+		else putchar(' ');
 }
 
 void hex_dump(const unsigned char *buf, int len) {
