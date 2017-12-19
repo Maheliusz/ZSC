@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <tcp.h>
 #include <common.h>
+#include <byte_order.h>
 
 void print_tcp_header(const struct tcphdr *tcp, int size) {
 	printf("\n\t|-Source Port:            ");

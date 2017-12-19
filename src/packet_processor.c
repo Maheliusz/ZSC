@@ -109,7 +109,7 @@ void process_icmp6_header(unsigned char *buf, int ip_offset, int offset, int siz
         default:
             hex_dump(buf + 4, size - 4);
     }
-    printf("\nChksum: %x\n", ntohs(icmpv6_chksum(hdrv6, icmp)));
+    printf("\nChksum: %x\n", (icmpv6_chksum(hdrv6, icmp)));
 }
 
 static inline void process_icmp6_echo(const unsigned char *buf, int ip_offset, int offset, int size) {
@@ -237,7 +237,8 @@ n_uint16_t chksum(n_uint16_t *buf, int len) {
     int count = len;
     n_uint32_t sum = 0;
     while (count > 1) {
-        sum += *(buf++);
+        sum += ntohs(*(buf));
+        buf++;
         count -= 2;
     }
     if (count > 0) {
