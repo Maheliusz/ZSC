@@ -6,10 +6,10 @@ typedef uint32_t h_uint32_t;
 typedef uint16_t n_uint16_t;		//network byte order
 typedef uint32_t n_uint32_t;
 
-n_uint16_t htons(h_uint16_t n);
-h_uint16_t ntohs(n_uint16_t n);
-n_uint32_t htonl(h_uint32_t n);
-h_uint32_t ntohl(n_uint32_t n);
+n_uint16_t htons(uint16_t n);
+h_uint16_t ntohs(uint16_t n);
+n_uint32_t htonl(uint32_t n);
+h_uint32_t ntohl(uint32_t n);
 
 #if defined(__BYTE_ORDER__)
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__

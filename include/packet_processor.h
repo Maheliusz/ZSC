@@ -21,6 +21,8 @@ void process_udp_header(unsigned char *buf, int ip_offset, int offset, int size)
 void process_tcp_header(unsigned char *buf, int ip_offset, int offset, int size);
 
 n_uint16_t chksum(n_uint16_t* buf, int len);
+n_uint16_t pseudoheaderchksum(unsigned char *buf, unsigned char *ptr, struct ipv6hdr *ip6, int chksumlen);
 n_uint16_t icmpv6_chksum(struct ipv6hdr *ip6, struct icmp6hdr *icmp);
+n_uint16_t udp_checksum(struct ipv6hdr *ip6, struct udphdr *udp, unsigned char *data);
 void print_data(const unsigned char *buf, int offset, int size);
 void byte_swap(unsigned char *c1, unsigned char *c2, int size);
