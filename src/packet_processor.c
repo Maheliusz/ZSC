@@ -109,7 +109,7 @@ void process_icmp6_header(unsigned char *buf, int ip_offset, int offset, int siz
         default:
             hex_dump(buf + 4, size - 4);
     }
-    printf("\nChksum: %.4x\n", (icmpv6_chksum(hdrv6, icmp)));
+    printf("\nChksum: %.4x\n", (icmpv6_chksum(hdrv6, icmp, buf + 4, size - 4)));
 }
 
 static inline void process_icmp6_echo(const unsigned char *buf, int ip_offset, int offset, int size) {
@@ -150,9 +150,9 @@ void process_icmp6_echo_reply(const unsigned char *buf, int ip_offset, int offse
     process_icmp6_echo(buf, ip_offset, offset, size);
 }
 
-n_uint16_t icmpv6_chksum(struct ipv6hdr *ip6, struct icmp6hdr *icmp) {
-    uint8_t buf[65535];
-    uint8_t *ptr = &(buf[0]);
+n_uint16_t icmpv6_chksum(struct ipv6hdr *ip6, struct icmp6hdr *icmp, unsigned char* data, int len) {
+    unsigned char buf[65535];
+    unsigned char *ptr = &(buf[0]);
     int chksumlen = 0;
 
     //ICMPv6 type
@@ -165,19 +165,18 @@ n_uint16_t icmpv6_chksum(struct ipv6hdr *ip6, struct icmp6hdr *icmp) {
     ptr += sizeof(icmp->code);
     chksumlen += sizeof(icmp->code);
 
-    //ICMPv6 checksum - during calculation of checksum = 0
-    /*
-    n_uint16_t tmpchksum = 0;
-    memcpy(ptr, &tmpchksum, sizeof(tmpchksum));
-    ptr += sizeof(tmpchksum);
-    chksumlen += sizeof(tmpchksum);
-     */
-
-
     //ICMPv6 payload
     memcpy(ptr, &icmp->dataun.un_data32, sizeof(icmp->dataun.un_data32));
     ptr += sizeof(icmp->dataun.un_data32);
     chksumlen += sizeof(icmp->dataun);
+
+    unsigned char *tmp = data;
+    for(int i=0; i<len; i++){
+        memcpy(ptr, &tmp, sizeof(unsigned char));
+        ptr += sizeof(unsigned char);
+        tmp += sizeof(unsigned char);
+        chksumlen += sizeof(unsigned char);
+    }
 
     //pad to the 16bit boundary
 
@@ -189,10 +188,10 @@ n_uint16_t icmpv6_chksum(struct ipv6hdr *ip6, struct icmp6hdr *icmp) {
     }
     */
 
-    return pseudoheaderchksum(buf, ptr, ip6, chksumlen);
+    return pseudoheader_chksum(buf, ptr, ip6, chksumlen);
 }
 
-n_uint16_t udp_checksum(struct ipv6hdr *ip6, struct udphdr *udp, unsigned char *data){
+n_uint16_t udp_checksum(struct ipv6hdr *ip6, struct udphdr *udp, unsigned char *data) {
     unsigned char buf[65535];
     unsigned char *ptr = &(buf[0]);
     int chksumlen = 0;
@@ -214,21 +213,14 @@ n_uint16_t udp_checksum(struct ipv6hdr *ip6, struct udphdr *udp, unsigned char *
     for (int i = 0; i < sizeof(udp->uh_ulen); i++, ptr++) {
         *ptr = *tmpptr;
         tmpptr++;
-        ptr+=2;
-        chksumlen+=2;
+        ptr += 2;
+        chksumlen += 2;
     }
 
-    /*
-    for (int i = 0; i < sizeof(udp->uh_ulen); i++, ptr++) {
-        *ptr = 0;
-        ptr++;
-        chksumlen++;
-    }
-     */
-    return pseudoheaderchksum(buf, ptr, ip6, chksumlen);
+    return pseudoheader_chksum(buf, ptr, ip6, chksumlen);
 }
 
-n_uint16_t pseudoheaderchksum(unsigned char *buf, unsigned char *ptr, struct ipv6hdr *ip6, int chksumlen) {
+n_uint16_t pseudoheader_chksum(unsigned char *buf, unsigned char *ptr, struct ipv6hdr *ip6, int chksumlen) {
     //source address
     memcpy(ptr, &ip6->saddr, sizeof(ip6->saddr));
     ptr += sizeof(ip6->saddr);
@@ -240,9 +232,8 @@ n_uint16_t pseudoheaderchksum(unsigned char *buf, unsigned char *ptr, struct ipv
     chksumlen += sizeof(ip6->daddr);
 
     //upper layer length
-    *ptr = 0; ptr++;
-    *ptr = 0; ptr++;
-    n_uint16_t upprlen = sizeof(ip6->payload_len);
+    uint32_t upprlen = 0;
+    upprlen += (ip6->payload_len);
     memcpy(ptr, &upprlen, sizeof(upprlen));
     ptr += 4;
     chksumlen += 4;
@@ -265,8 +256,8 @@ n_uint16_t pseudoheaderchksum(unsigned char *buf, unsigned char *ptr, struct ipv
 //funkcja liczaca internet checksum
 n_uint16_t chksum(uint16_t *buf, int len) {
     int count = len;
-    n_uint32_t sum = 0;
-    n_uint16_t res = 0;
+    uint32_t sum = 0;
+    uint16_t res = 0;
     while (count > 1) {
         sum += (*(buf));
         buf++;
@@ -276,9 +267,9 @@ n_uint16_t chksum(uint16_t *buf, int len) {
         sum += *(unsigned char *) buf;
     }
     while (sum >> 16) {
-        sum = sum + (sum >> 16);
+        sum = (sum & 0xffff) + (sum >> 16);
     }
-    res = (n_uint16_t) sum;
+    res = (uint16_t) sum;
     return ~res;
 }
 

@@ -1,4 +1,5 @@
 #pragma once
+//#pragma pack(push, 1)
 #include <byte_order.h>
 
 #define IP6_ALEN	16				//octets in one IPv6 address
@@ -23,7 +24,7 @@ struct ipv6hdr {
 	
 	unsigned char	saddr[IP6_ALEN];
 	unsigned char	daddr[IP6_ALEN];
-};
+}__attribute__((packed));
 
 unsigned char	get_ip6_version(struct ipv6hdr);
 unsigned char	get_ip6_tclass(struct ipv6hdr);
@@ -34,3 +35,5 @@ h_uint32_t		get_ip6_flow_lbl(struct ipv6hdr);
 #define get_ip6_flow_lbl(x)	(ntohl(x -> vtcfl) & 0xFFFFF)
 
 void print_ip6_header(const struct ipv6hdr *ip6, int size);
+
+//#pragma pack(pop)
