@@ -21,10 +21,10 @@ void process_packet(unsigned char *buf, int size) {
     //process next header
     switch (ntohs(((struct ethhdr *) buf)->h_proto)) {
         case ETH_P_IP:
-            process_ip_header(buf, ETH_HLEN, size);
+            process_ip_header(buf, ETH_HLEN, size - ETH_HLEN);
             break;
         case ETH_P_IPV6:
-            process_ip6_header(buf, ETH_HLEN, size);
+            process_ip6_header(buf, ETH_HLEN, size - ETH_HLEN);
             break;
         default:
             hex_dump(buf + ETH_HLEN, size - ETH_HLEN);
@@ -72,13 +72,13 @@ void process_ip6_header(unsigned char *buf, int offset, int size) {
     //process next header
     switch (((struct ipv6hdr *) header)->nexthdr) {
         case IP6_NEXT_ICMPv6:
-            process_icmp6_header(buf, offset, offset + IP6_HLEN, size, (struct ipv6hdr *) header);
+            process_icmp6_header(buf, offset, offset + IP6_HLEN, size - IP6_HLEN, (struct ipv6hdr *) header);
             break;
         case IP6_NEXT_UDP:
-            process_udp_header(buf, offset, offset + IP6_HLEN, size);
+            process_udp_header(buf, offset, offset + IP6_HLEN, size - IP6_HLEN);
             break;
         case IP6_NEXT_TCP:
-            process_tcp_header(buf, offset, offset + IP6_HLEN, size);
+            process_tcp_header(buf, offset, offset + IP6_HLEN, size - IP6_HLEN);
         default:
             hex_dump(buf + offset + IP6_HLEN, size - offset - IP6_HLEN);
     }
@@ -150,77 +150,12 @@ void process_icmp6_echo_reply(const unsigned char *buf, int ip_offset, int offse
     process_icmp6_echo(buf, ip_offset, offset, size);
 }
 
-n_uint16_t icmpv6_chksum(struct ipv6hdr *ip6, struct icmp6hdr *icmp, unsigned char* data, int len) {
+n_uint16_t icmpv6_chksum(struct ipv6hdr *ip6, struct icmp6hdr *icmp, unsigned char *data, int len) {
+    printf("\nDat:%d\n", len);
     unsigned char buf[65535];
     unsigned char *ptr = &(buf[0]);
     int chksumlen = 0;
 
-    //ICMPv6 type
-    memcpy(ptr, &icmp->type, sizeof(icmp->type));
-    ptr += sizeof(icmp->type);
-    chksumlen += sizeof(icmp->type);
-
-    //ICMPv6 code
-    memcpy(ptr, &icmp->code, sizeof(icmp->code));
-    ptr += sizeof(icmp->code);
-    chksumlen += sizeof(icmp->code);
-
-    //ICMPv6 payload
-    memcpy(ptr, &icmp->dataun.un_data32, sizeof(icmp->dataun.un_data32));
-    ptr += sizeof(icmp->dataun.un_data32);
-    chksumlen += sizeof(icmp->dataun);
-
-    unsigned char *tmp = data;
-    for(int i=0; i<len; i++){
-        memcpy(ptr, &tmp, sizeof(unsigned char));
-        ptr += sizeof(unsigned char);
-        tmp += sizeof(unsigned char);
-        chksumlen += sizeof(unsigned char);
-    }
-
-    //pad to the 16bit boundary
-
-    /*
-    for (int i = 0; i < sizeof(icmp->dataun.un_data32); i++, ptr++) {
-        *ptr = 0;
-        ptr++;
-        chksumlen++;
-    }
-    */
-
-    return pseudoheader_chksum(buf, ptr, ip6, chksumlen);
-}
-
-n_uint16_t udp_checksum(struct ipv6hdr *ip6, struct udphdr *udp, unsigned char *data) {
-    unsigned char buf[65535];
-    unsigned char *ptr = &(buf[0]);
-    int chksumlen = 0;
-
-    memcpy(ptr, &udp->uh_dport, sizeof(udp->uh_dport));
-    ptr += sizeof(udp->uh_dport);
-    chksumlen += sizeof(udp->uh_dport);
-
-    memcpy(ptr, &udp->uh_sport, sizeof(udp->uh_sport));
-    ptr += sizeof(udp->uh_sport);
-    chksumlen += sizeof(udp->uh_sport);
-
-    memcpy(ptr, &udp->uh_ulen, sizeof(udp->uh_ulen));
-    ptr += sizeof(udp->uh_ulen);
-    chksumlen += sizeof(udp->uh_ulen);
-
-    unsigned char *tmpptr = data;
-
-    for (int i = 0; i < sizeof(udp->uh_ulen); i++, ptr++) {
-        *ptr = *tmpptr;
-        tmpptr++;
-        ptr += 2;
-        chksumlen += 2;
-    }
-
-    return pseudoheader_chksum(buf, ptr, ip6, chksumlen);
-}
-
-n_uint16_t pseudoheader_chksum(unsigned char *buf, unsigned char *ptr, struct ipv6hdr *ip6, int chksumlen) {
     //source address
     memcpy(ptr, &ip6->saddr, sizeof(ip6->saddr));
     ptr += sizeof(ip6->saddr);
@@ -238,6 +173,80 @@ n_uint16_t pseudoheader_chksum(unsigned char *buf, unsigned char *ptr, struct ip
     ptr += 4;
     chksumlen += 4;
 
+    //3 bytes = 0, then next header byte
+    *ptr = 0;
+    ptr++;
+    *ptr = 0;
+    ptr++;
+    *ptr = 0;
+    ptr++;
+    chksumlen += 3;
+    memcpy(ptr, &ip6->nexthdr, sizeof(ip6->nexthdr));
+    ptr += sizeof(ip6->nexthdr);
+    chksumlen += sizeof(ip6->nexthdr);
+
+    //ICMPv6 type
+    memcpy(ptr, &icmp->type, sizeof(icmp->type));
+    ptr += sizeof(icmp->type);
+    chksumlen += sizeof(icmp->type);
+
+    //ICMPv6 code
+    memcpy(ptr, &icmp->code, sizeof(icmp->code));
+    ptr += sizeof(icmp->code);
+    chksumlen += sizeof(icmp->code);
+
+    //ICMPv6 payload
+    /*
+    uint32_t tmp32 = htonl(icmp->dataun.un_data32[0]);
+    memcpy(ptr, &tmp32, sizeof(tmp32));
+    ptr += sizeof(tmp32);
+    chksumlen += sizeof(tmp32);
+    */
+    memcpy(ptr, &icmp->dataun.un_data32[0], sizeof(icmp->dataun.un_data32[0]));
+    ptr += sizeof(icmp->dataun.un_data32[0]);
+    chksumlen += sizeof(icmp->dataun.un_data32[0]);
+
+    unsigned char *tmp = data;
+    int i;
+    for (i = 0; i < len; i++) {
+        memcpy(ptr, tmp, sizeof(unsigned char));
+        ptr += sizeof(unsigned char);
+        tmp += sizeof(unsigned char);
+        chksumlen += sizeof(unsigned char);
+    }
+
+
+    //pad to the 16bit boundary
+    if (i % 2 != 0) {
+        *ptr = 0;
+        ptr++;
+        chksumlen++;
+    }
+
+    return pseudoheader_chksum(buf, ptr, ip6, chksumlen);
+}
+
+n_uint16_t udp_checksum(struct ipv6hdr *ip6, struct udphdr *udp, unsigned char *data) {
+    unsigned char buf[65535];
+    unsigned char *ptr = &(buf[0]);
+    int chksumlen = 0;
+
+    //source address
+    memcpy(ptr, &ip6->saddr, sizeof(ip6->saddr));
+    ptr += sizeof(ip6->saddr);
+    chksumlen += sizeof(ip6->saddr);
+
+    //dest address
+    memcpy(ptr, &ip6->daddr, sizeof(ip6->daddr));
+    ptr += sizeof(ip6->daddr);
+    chksumlen += sizeof(ip6->daddr);
+
+    //upper layer length
+    uint32_t upprlen = 0;
+    upprlen += (ip6->payload_len);
+    memcpy(ptr, &upprlen, sizeof(upprlen));
+    ptr += 4;
+    chksumlen += 4;
 
     //3 bytes = 0, then next header byte
     *ptr = 0;
@@ -250,6 +259,70 @@ n_uint16_t pseudoheader_chksum(unsigned char *buf, unsigned char *ptr, struct ip
     memcpy(ptr, &ip6->nexthdr, sizeof(ip6->nexthdr));
     ptr += sizeof(ip6->nexthdr);
     chksumlen += sizeof(ip6->nexthdr);
+
+    memcpy(ptr, &udp->uh_dport, sizeof(udp->uh_dport));
+    ptr += sizeof(udp->uh_dport);
+    chksumlen += sizeof(udp->uh_dport);
+
+    memcpy(ptr, &udp->uh_sport, sizeof(udp->uh_sport));
+    ptr += sizeof(udp->uh_sport);
+    chksumlen += sizeof(udp->uh_sport);
+
+    memcpy(ptr, &udp->uh_ulen, sizeof(udp->uh_ulen));
+    ptr += sizeof(udp->uh_ulen);
+    chksumlen += sizeof(udp->uh_ulen);
+
+    unsigned char *tmpptr = data;
+    int i;
+    for (i = 0; i < sizeof(udp->uh_ulen); i++, ptr++) {
+        memcpy(ptr, tmpptr, sizeof(unsigned char));
+        ptr += sizeof(unsigned char);
+        tmpptr += sizeof(unsigned char);
+        chksumlen += sizeof(unsigned char);
+    }
+
+    if (i % 2 != 0) {
+        *ptr = 0;
+        ptr++;
+        chksumlen++;
+    }
+
+    return pseudoheader_chksum(buf, ptr, ip6, chksumlen);
+}
+
+n_uint16_t pseudoheader_chksum(unsigned char *buf, unsigned char *ptr, struct ipv6hdr *ip6, int chksumlen) {
+    /*
+     *
+    //source address
+    memcpy(ptr, &ip6->saddr, sizeof(ip6->saddr));
+    ptr += sizeof(ip6->saddr);
+    chksumlen += sizeof(ip6->saddr);
+
+    //dest address
+    memcpy(ptr, &ip6->daddr, sizeof(ip6->daddr));
+    ptr += sizeof(ip6->daddr);
+    chksumlen += sizeof(ip6->daddr);
+
+    //upper layer length
+    uint32_t upprlen = 0;
+    upprlen += (ip6->payload_len);
+    memcpy(ptr, &upprlen, sizeof(upprlen));
+    ptr += 4;
+    chksumlen += 4;
+
+    //3 bytes = 0, then next header byte
+    *ptr = 0;
+    ptr++;
+    *ptr = 0;
+    ptr++;
+    *ptr = 0;
+    ptr++;
+    chksumlen += 3;
+    memcpy(ptr, &ip6->nexthdr, sizeof(ip6->nexthdr));
+    ptr += sizeof(ip6->nexthdr);
+    chksumlen += sizeof(ip6->nexthdr);
+
+     */
     return chksum((uint16_t *) buf, chksumlen);
 }
 
@@ -259,7 +332,7 @@ n_uint16_t chksum(uint16_t *buf, int len) {
     uint32_t sum = 0;
     uint16_t res = 0;
     while (count > 1) {
-        sum += (*(buf));
+        sum += ~(*(buf));
         buf++;
         count -= 2;
     }
