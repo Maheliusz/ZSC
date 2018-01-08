@@ -1,6 +1,8 @@
 #pragma once
 #include <byte_order.h>
 
+#define UDP_HLEN 8
+
 struct udphdr {
 	n_uint16_t	uh_sport;		// source port
 	n_uint16_t	uh_dport;		// destination port

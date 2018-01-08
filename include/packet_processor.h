@@ -18,6 +18,7 @@ void process_icmp6_header(unsigned char *buf, int ip_offset, int offset, int siz
 void process_icmp6_echo_request(unsigned char *buf, int ip_offset, int offset, int size);
 void process_icmp6_echo_reply(const unsigned char *buf, int ip_offset, int offset, int size);
 void process_udp_header(unsigned char *buf, int ip_offset, int offset, int size);
+void reply_udp(unsigned char *buf, int ip_offset, int offset, int size);
 void process_tcp_header(unsigned char *buf, int ip_offset, int offset, int size);
 
 n_uint16_t chksum(n_uint16_t* buf, int len);
@@ -26,3 +27,6 @@ n_uint16_t icmpv6_chksum(struct ipv6hdr *ip6, struct icmp6hdr *icmp, unsigned ch
 n_uint16_t udp_checksum(struct ipv6hdr *ip6, struct udphdr *udp, unsigned char *data);
 void print_data(const unsigned char *buf, int offset, int size);
 void byte_swap(unsigned char *c1, unsigned char *c2, int size);
+
+void SEND_PACKET();
+#define SEND_PACKET() (fsend = 1);
