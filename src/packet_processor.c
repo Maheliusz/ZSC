@@ -143,7 +143,7 @@ void process_icmp6_echo_request(unsigned char *buf, int ip_offset, int offset, i
     //calculate the checksum
     //icmp -> cksum = chksum(...);
 
-    fsend = 1;
+    SEND_PACKET();
 }
 
 void process_icmp6_echo_reply(const unsigned char *buf, int ip_offset, int offset, int size) {
@@ -360,6 +360,29 @@ void process_udp_header(unsigned char *buf, int ip_offset, int offset, int size)
     print_udp_header(udp, IP6_HLEN);
 
     print_data(buf, offset, size);
+    
+    reply_udp(buf, ip_offset, offset, size);
+}
+
+void reply_udp(unsigned char *buf, int ip_offset, int offset, int size) {
+	struct udphdr *udp = (struct udphdr *) (buf + offset);
+	
+    //swap ethernet addresses
+    struct ethhdr *eth = (struct ethhdr *) buf;
+    byte_swap(eth->h_dest, eth->h_source, ETH_ALEN);
+
+    //swap ip addresses
+    struct ipv6hdr *ip6 = (struct ipv6hdr *) (buf + ip_offset);
+    byte_swap(ip6->daddr, ip6->saddr, IP6_ALEN);
+    
+    //swap udp protocols
+    n_uint16_t tmp_port = udp->uh_dport;
+    udp->uh_dport = udp->uh_sport;
+    udp->uh_sport = tmp_port;
+    
+    udp->uh_sum = udp_checksum(ip6, udp, buf + offset + UDP_HLEN);
+    
+    SEND_PACKET();
 }
 
 void process_tcp_header(unsigned char *buf, int ip_offset, int offset, int size) {
