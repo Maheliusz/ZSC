@@ -6,13 +6,32 @@
 #include <errno.h>
 #include <string.h>
 #include <pthread.h>
+#include <signal.h>
 
-#include "packet_processor.h"
+#include <common.h>
+#include <packet_processor.h>
 
 typedef struct packet {
 	unsigned char *data;
 	int size;
 } packet_t;
+
+pcap_t *capturer;
+struct pcap_pkthdr *pkt;
+packet_t *packets;
+
+void exit_handler() {
+	free(packets);
+	free(pkt);
+	pcap_close(capturer);
+}
+
+void signal_handler(int signum) {
+	switch (signum) {
+		case SIGINT:
+			fterm++;
+	}
+}
 
 void capture_packet(pcap_t *capturer, struct pcap_pkthdr *pkt, packet_t *pack) {
 	pack -> data = pcap_next(capturer, pkt);
@@ -47,7 +66,7 @@ char *devprompt() {
 
 int pack_num_prompt() {
 	int how_many;
-	printf("Enter the number of the packages to sniff: ");
+	printf("Enter the number of the packages to sniff: (-1 for endless loop) ");
 	scanf("%d", &how_many);
 	return how_many;
 }
@@ -62,15 +81,26 @@ pcap_t *init_capture() {
 }
 
 int main(int argc, char *argv[]) {
-	pcap_t *capturer = init_capture();
+	struct sigaction sigact;
+	memset (&sigact, 0, sizeof sigact);
+	sigact.sa_handler = &signal_handler;
+	fterm = 0;
+	
+	capturer = init_capture();
 	int how_many = pack_num_prompt();
+	finft = (how_many < 0) ? how_many = 1 : 0;
 	
-	struct pcap_pkthdr *pkt = calloc(1, sizeof(struct pcap_pkthdr));
-	packet_t *packets = calloc((size_t) how_many, sizeof(packet_t));
+	pkt = calloc(1, sizeof(struct pcap_pkthdr));
+	packets = calloc((size_t) how_many, sizeof(packet_t)); 
 	
-	for (int i = 0; i < how_many; i++) {
+	atexit(exit_handler);
+	sigaction(SIGINT, &sigact, NULL);
+	
+	do for (int i = 0; i < how_many; i++) {
 		capture_packet(capturer, pkt, &packets[i]);
 		process_packet(packets[i].data, packets[i].size);
+		
+		if (fterm > 0) return 0;
 		
 		if (fsend != 0) {
 			if (pcap_inject(capturer, packets[i].data, packets[i].size) == -1) {
@@ -79,10 +109,8 @@ int main(int argc, char *argv[]) {
 				exit(1);
 			}
 		}
-	}
-	
-	free(pkt);
-	free(packets);
-	pcap_close(capturer);
+		
+		if (fterm > 0) return 0;
+	} while (finft);
 	return 0;
 }
