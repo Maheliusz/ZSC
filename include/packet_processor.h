@@ -31,4 +31,3 @@ unsigned char* inverse_bytes(unsigned char* buf, int size);
 
 void SEND_PACKET();
 #define SEND_PACKET() (fsend = 1);
-
