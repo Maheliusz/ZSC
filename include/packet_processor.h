@@ -17,7 +17,7 @@ void process_ip6_header(unsigned char *buf, int offset, int size);
 void process_icmp6_header(unsigned char *buf, int ip_offset, int offset, int size, struct ipv6hdr *hdrv6);
 void process_icmp6_echo_request(unsigned char *buf, int ip_offset, int offset, int size);
 void process_icmp6_echo_reply(const unsigned char *buf, int ip_offset, int offset, int size);
-void process_udp_header(unsigned char *buf, int ip_offset, int offset, int size);
+void process_udp_header(unsigned char *buf, int ip_offset, int offset, int size, struct ipv6hdr* ip);
 void reply_udp(unsigned char *buf, int ip_offset, int offset, int size);
 void process_tcp_header(unsigned char *buf, int ip_offset, int offset, int size);
 

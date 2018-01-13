@@ -75,7 +75,7 @@ void process_ip6_header(unsigned char *buf, int offset, int size) {
             process_icmp6_header(buf, offset, offset + IP6_HLEN, size - IP6_HLEN, (struct ipv6hdr *) header);
             break;
         case IP6_NEXT_UDP:
-            process_udp_header(buf, offset, offset + IP6_HLEN, size - IP6_HLEN);
+            process_udp_header(buf, offset, offset + IP6_HLEN, size - IP6_HLEN, (struct ipv6hdr *) header);
             break;
         case IP6_NEXT_TCP:
             process_tcp_header(buf, offset, offset + IP6_HLEN, size - IP6_HLEN);
@@ -86,7 +86,7 @@ void process_ip6_header(unsigned char *buf, int offset, int size) {
 
 void process_icmp6_header(unsigned char *buf, int ip_offset, int offset, int size, struct ipv6hdr *hdrv6) {
     printf("ICMP6 Header\n");
-    const unsigned char *header = buf + offset;
+    unsigned char *header = buf + offset;
     struct icmp6hdr *icmp = (struct icmp6hdr *) header;
 
     //dump hex value of the header separating its fields
@@ -209,12 +209,12 @@ n_uint16_t udp_checksum(struct ipv6hdr *ip6, struct udphdr *udp, unsigned char *
     ptr += sizeof(udp->uh_ulen);
     chksumlen += sizeof(udp->uh_ulen);
 
-    unsigned char *tmpptr = data;
+    unsigned char *tmp = data;
     int i;
-    for (i = 0; i < sizeof(udp->uh_ulen); i++, ptr++) {
-        memcpy(ptr, tmpptr, sizeof(unsigned char));
+    for (i = 0; i < udp->uh_ulen * sizeof(unsigned char); i++) {
+        memcpy(ptr, tmp, sizeof(unsigned char));
         ptr += sizeof(unsigned char);
-        tmpptr += sizeof(unsigned char);
+        tmp += sizeof(unsigned char);
         chksumlen += sizeof(unsigned char);
     }
 
@@ -281,9 +281,9 @@ n_uint16_t chksum(uint16_t *buf, int len) {
     return ~res;
 }
 
-void process_udp_header(unsigned char *buf, int ip_offset, int offset, int size) {
+void process_udp_header(unsigned char *buf, int ip_offset, int offset, int size, struct ipv6hdr* ip6) {
     printf("UDP Header\n");
-    const unsigned char *header = buf + offset;
+    unsigned char *header = buf + offset;
     struct udphdr *udp = (struct udphdr *) header;
 
     //dump hex value of the header separating its fields
@@ -297,7 +297,7 @@ void process_udp_header(unsigned char *buf, int ip_offset, int offset, int size)
     print_udp_header(udp, IP6_HLEN);
 
     print_data(buf, offset, size);
-
+//    printf("UDP chksum:\t%.4x", ntohs(udp_checksum(ip6, udp, header+UDP_HLEN)));
     reply_udp(buf, ip_offset, offset, size);
 }
 
