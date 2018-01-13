@@ -109,7 +109,7 @@ void process_icmp6_header(unsigned char *buf, int ip_offset, int offset, int siz
         default:
             hex_dump(buf + ICMP6_HLEN, size - ICMP6_HLEN);
     }
-    printf("\nChksum: %.4x\n", (icmpv6_chksum(hdrv6, icmp, buf + ICMP6_HLEN, size - ICMP6_HLEN)));
+    printf("\nChksum: %.4x\n", ntohs(icmpv6_chksum(hdrv6, icmp, buf + ICMP6_HLEN, size - ICMP6_HLEN)));
 }
 
 static inline void process_icmp6_echo(const unsigned char *buf, int ip_offset, int offset, int size) {
@@ -201,13 +201,16 @@ n_uint16_t icmpv6_chksum(struct ipv6hdr *ip6, struct icmp6hdr *icmp, unsigned ch
 //    uint32_t tmp32 = icmp->dataun.un_data32[0];
 //    tmp32 = htonl(tmp32);
 //    memcpy(ptr, &tmp32, sizeof(icmp->dataun.un_data32[0]));
-    memcpy(ptr, &icmp->dataun.un_data32[0], sizeof(icmp->dataun.un_data32[0]));
-    ptr += sizeof(icmp->dataun.un_data32[0]);
-    chksumlen += sizeof(icmp->dataun.un_data32[0]);
+    memcpy(ptr, &icmp->dataun.un_data16[0], sizeof(icmp->dataun.un_data16[0]));
+    ptr += sizeof(icmp->dataun.un_data16[0]);
+    chksumlen += sizeof(icmp->dataun.un_data16[0]);
+    memcpy(ptr, &icmp->dataun.un_data16[1], sizeof(icmp->dataun.un_data16[1]));
+    ptr += sizeof(icmp->dataun.un_data16[1]);
+    chksumlen += sizeof(icmp->dataun.un_data16[1]);
 
     unsigned char *tmp = data;
     int i;
-    for (i = 0; i < len; i++) {
+    for (i = 0; i < len * sizeof(unsigned char); i++) {
         memcpy(ptr, tmp, sizeof(unsigned char));
         ptr += sizeof(unsigned char);
         tmp += sizeof(unsigned char);
@@ -360,13 +363,13 @@ void process_udp_header(unsigned char *buf, int ip_offset, int offset, int size)
     print_udp_header(udp, IP6_HLEN);
 
     print_data(buf, offset, size);
-    
+
     reply_udp(buf, ip_offset, offset, size);
 }
 
 void reply_udp(unsigned char *buf, int ip_offset, int offset, int size) {
-	struct udphdr *udp = (struct udphdr *) (buf + offset);
-	
+    struct udphdr *udp = (struct udphdr *) (buf + offset);
+
     //swap ethernet addresses
     struct ethhdr *eth = (struct ethhdr *) buf;
     byte_swap(eth->h_dest, eth->h_source, ETH_ALEN);
@@ -374,14 +377,14 @@ void reply_udp(unsigned char *buf, int ip_offset, int offset, int size) {
     //swap ip addresses
     struct ipv6hdr *ip6 = (struct ipv6hdr *) (buf + ip_offset);
     byte_swap(ip6->daddr, ip6->saddr, IP6_ALEN);
-    
+
     //swap udp protocols
     n_uint16_t tmp_port = udp->uh_dport;
     udp->uh_dport = udp->uh_sport;
     udp->uh_sport = tmp_port;
-    
+
     udp->uh_sum = udp_checksum(ip6, udp, buf + offset + UDP_HLEN);
-    
+
     SEND_PACKET();
 }
 
@@ -427,11 +430,11 @@ void byte_swap(unsigned char *c1, unsigned char *c2, int size) {
     }
 }
 
-unsigned char* inverse_bytes(unsigned char* buf, int size){
-    unsigned char* res = calloc(size, sizeof(unsigned char));
+unsigned char *inverse_bytes(unsigned char *buf, int size) {
+    unsigned char *res = calloc(size, sizeof(unsigned char));
     int rnr = 0;
-    for(int i=size-1; i>=0; i--){
-        res[rnr++]=buf[i];
+    for (int i = size - 1; i >= 0; i--) {
+        res[rnr++] = buf[i];
     }
     return res;
 }

@@ -19,7 +19,7 @@ void print_icmp6_header(const struct icmp6hdr *icmp, int size) {
 	printf("%u", icmp -> code);
 	printf("\n\t|-Checksum: ");
 	printf("%.4x", ntohs(icmp -> cksum));
-	printf("\n\t|-Data:     ");
+	printf("\n\t|-Header data:     ");
 	printf("%.8x\n", ntohl(icmp -> dataun.un_data32[0]));
 }
 
