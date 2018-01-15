@@ -1,6 +1,13 @@
 #pragma once
 #include <stdint.h>
 
+/*
+ * Definitions of functions and types for handling byte order (BIG-ENDIAN/LITTLE-ENDIAN)
+ *
+ * Net-order is always BIG-ENDIAN.
+ * PCs are most often LITTLE-ENDIAN.
+ */
+
 typedef uint16_t h_uint16_t;		//host byte order
 typedef uint32_t h_uint32_t;
 typedef uint16_t n_uint16_t;		//network byte order

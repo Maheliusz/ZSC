@@ -40,5 +40,4 @@ void print_ip6_header(const struct ipv6hdr *ip, int size) {
 	printf("\n\t|-Destination Address: ");
 	hex_dump(ip -> daddr, IP6_ALEN);
 	printf("\n");
-    //printf("%d\n", sizeof(ip->saddr)/sizeof(n_uint16_t));
 }

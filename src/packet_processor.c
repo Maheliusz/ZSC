@@ -4,6 +4,7 @@
 #include <udp.h>
 #include "packet_processor.h"
 
+//process raw Ethernet packet
 void process_packet(unsigned char *buf, int size) {
     fsend = 0;
     printf("Ethernet Header\n");
@@ -33,6 +34,7 @@ void process_packet(unsigned char *buf, int size) {
     printf("\n\n");
 }
 
+//process raw IPv4 packet
 void process_ip_header(unsigned char *buf, int offset, int size) {
     printf("IP Header\n");
     const unsigned char *header = buf + offset;
@@ -49,6 +51,7 @@ void process_ip_header(unsigned char *buf, int offset, int size) {
     print_ip_header(ip, ip->ihl);
 }
 
+//process raw IPv6 packet
 void process_ip6_header(unsigned char *buf, int offset, int size) {
     printf("IPv6 Header\n");
     const unsigned char *header = buf + offset;
@@ -84,6 +87,7 @@ void process_ip6_header(unsigned char *buf, int offset, int size) {
     }
 }
 
+//process raw ICMPv6 packet
 void process_icmp6_header(unsigned char *buf, int ip_offset, int offset, int size, struct ipv6hdr *hdrv6) {
     printf("ICMP6 Header\n");
     unsigned char *header = buf + offset;
@@ -109,11 +113,10 @@ void process_icmp6_header(unsigned char *buf, int ip_offset, int offset, int siz
         default:
             hex_dump(buf + ICMP6_HLEN, size - ICMP6_HLEN);
     }
-    printf("\nChksum: %.4x\n", ntohs(icmpv6_chksum(hdrv6, icmp, header + ICMP6_HLEN, size - ICMP6_HLEN)));
 }
 
 static inline void process_icmp6_echo(const unsigned char *buf, int ip_offset, int offset, int size) {
-    printf("ICMP6 Echo Request");
+    printf("ICMP6 Echo");
     const unsigned char *header = buf + offset;
     struct icmp6hdr *icmp = (struct icmp6hdr *) header;
     offset += ICMP6_HLEN;
@@ -123,10 +126,11 @@ static inline void process_icmp6_echo(const unsigned char *buf, int ip_offset, i
     print_data(buf, offset, size);
 }
 
+//answer ICMPv6 echo request
 void process_icmp6_echo_request(unsigned char *buf, int ip_offset, int offset, int size) {
     process_icmp6_echo(buf, ip_offset, offset, size);
 
-    const unsigned char *header = buf + offset;
+    unsigned char *header = buf + offset;
     struct icmp6hdr *icmp = (struct icmp6hdr *) header;
 
     //swap ethernet addresses
@@ -138,10 +142,10 @@ void process_icmp6_echo_request(unsigned char *buf, int ip_offset, int offset, i
     byte_swap(ip6->daddr, ip6->saddr, IP6_ALEN);
 
     //change message type
-    //icmp -> type = ICMP6_ECHOREPLY;
+    icmp->type = ICMP6_ECHOREPLY;
 
     //calculate the checksum
-    //icmp -> cksum = chksum(...);
+    icmp->cksum = icmpv6_chksum(ip6, icmp, header + ICMP6_HLEN, size);
 
     SEND_PACKET();
 }
@@ -150,6 +154,7 @@ void process_icmp6_echo_reply(const unsigned char *buf, int ip_offset, int offse
     process_icmp6_echo(buf, ip_offset, offset, size);
 }
 
+//setting up checksum buffer with ICMPv6 header
 n_uint16_t icmpv6_chksum(struct ipv6hdr *ip6, struct icmp6hdr *icmp, unsigned char *data, int len) {
     unsigned char buf[65535];
     unsigned char *ptr = &(buf[0]);
@@ -192,6 +197,7 @@ n_uint16_t icmpv6_chksum(struct ipv6hdr *ip6, struct icmp6hdr *icmp, unsigned ch
     return pseudoheader_chksum(buf, ptr, ip6, chksumlen);
 }
 
+//setting up checksum buffer with UDP header
 n_uint16_t udp_checksum(struct ipv6hdr *ip6, struct udphdr *udp, unsigned char *data) {
     unsigned char buf[65535];
     unsigned char *ptr = &(buf[0]);
@@ -227,6 +233,7 @@ n_uint16_t udp_checksum(struct ipv6hdr *ip6, struct udphdr *udp, unsigned char *
     return pseudoheader_chksum(buf, ptr, ip6, chksumlen);
 }
 
+//adding pseudoheader to checksum buffer
 n_uint16_t pseudoheader_chksum(unsigned char *buf, unsigned char *ptr, struct ipv6hdr *ip6, int chksumlen) {
 
     //source address
@@ -261,7 +268,7 @@ n_uint16_t pseudoheader_chksum(unsigned char *buf, unsigned char *ptr, struct ip
     return chksum((uint16_t *) buf, chksumlen);
 }
 
-//funkcja liczaca internet checksum
+//counting checksum
 n_uint16_t chksum(uint16_t *buf, int len) {
     int count = len;
     uint32_t sum = 0;
@@ -281,7 +288,8 @@ n_uint16_t chksum(uint16_t *buf, int len) {
     return ~res;
 }
 
-void process_udp_header(unsigned char *buf, int ip_offset, int offset, int size, struct ipv6hdr* ip6) {
+//process raw UDP packet
+void process_udp_header(unsigned char *buf, int ip_offset, int offset, int size, struct ipv6hdr *ip6) {
     printf("UDP Header\n");
     unsigned char *header = buf + offset;
     struct udphdr *udp = (struct udphdr *) header;
@@ -297,10 +305,11 @@ void process_udp_header(unsigned char *buf, int ip_offset, int offset, int size,
     print_udp_header(udp, IP6_HLEN);
 
     print_data(buf, offset, size);
-//    printf("UDP chksum:\t%.4x", ntohs(udp_checksum(ip6, udp, header+UDP_HLEN)));
+
     reply_udp(buf, ip_offset, offset, size);
 }
 
+//answer UDP client's request
 void reply_udp(unsigned char *buf, int ip_offset, int offset, int size) {
     struct udphdr *udp = (struct udphdr *) (buf + offset);
 
@@ -322,6 +331,7 @@ void reply_udp(unsigned char *buf, int ip_offset, int offset, int size) {
     SEND_PACKET();
 }
 
+//process raw TCP packet
 void process_tcp_header(unsigned char *buf, int ip_offset, int offset, int size) {
     printf("TCP Header\n");
     const unsigned char *header = buf + offset;
@@ -362,13 +372,4 @@ void byte_swap(unsigned char *c1, unsigned char *c2, int size) {
         c2[i] = c1[i];
         c1[i] = tmp;
     }
-}
-
-unsigned char *inverse_bytes(unsigned char *buf, int size) {
-    unsigned char *res = calloc(size, sizeof(unsigned char));
-    int rnr = 0;
-    for (int i = size - 1; i >= 0; i--) {
-        res[rnr++] = buf[i];
-    }
-    return res;
 }

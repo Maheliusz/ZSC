@@ -28,6 +28,6 @@ struct iphdr {
 	n_uint32_t		saddr;
 	n_uint32_t		daddr;
 	/*The options start here. */
-};
+}__attribute__((packed));
 
 void print_ip_header(const struct iphdr *ip, int size);
