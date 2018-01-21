@@ -4,6 +4,8 @@
 #include <udp.h>
 #include "packet_processor.h"
 
+void process_udp_data_answer(unsigned char *string, int size);
+
 //process raw Ethernet packet
 void process_packet(unsigned char *buf, int size) {
     fsend = 0;
@@ -306,7 +308,8 @@ void process_udp_header(unsigned char *buf, int ip_offset, int offset, int size,
 
     print_data(buf, offset, size);
 
-    reply_udp(buf, ip_offset, offset, size);
+    //HARDCODED SERVER PORT ADDRESS: 50051
+    if (udp->uh_dport == htons(50051)) reply_udp(buf, ip_offset, offset, size);
 }
 
 //answer UDP client's request
@@ -326,9 +329,20 @@ void reply_udp(unsigned char *buf, int ip_offset, int offset, int size) {
     udp->uh_dport = udp->uh_sport;
     udp->uh_sport = tmp_port;
 
+    process_udp_data_answer(buf + offset + UDP_HLEN, size);
+
     udp->uh_sum = udp_checksum(ip6, udp, buf + offset + UDP_HLEN);
 
     SEND_PACKET();
+}
+
+void process_udp_data_answer(unsigned char *string, int size) {
+    for (int i = 0; i < size; i++) {
+        if (string[i] == '\n') return;
+        else {
+            string[i]++;
+        }
+    }
 }
 
 //process raw TCP packet
